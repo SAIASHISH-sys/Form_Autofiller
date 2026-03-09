@@ -1,6 +1,7 @@
 "use client";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { useAuth } from "@/context/AuthContext";
 import { useEffect, useState } from "react";
 import { LayoutDashboard, UserCircle, Users, Settings, LogOut, Sparkles, Menu, X } from "lucide-react";
 
@@ -13,6 +14,8 @@ const navItems = [
 
 export function Navbar() {
   const pathname = usePathname();
+  const router = useRouter();
+  const { logout } = useAuth();
   const [visible, setVisible] = useState(true);
   const [lastScroll, setLastScroll] = useState(0);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -34,6 +37,10 @@ export function Navbar() {
     return () => window.removeEventListener("scroll", onScroll);
   }, [lastScroll]);
 
+  const handleSignOut = () => {
+    logout();
+    router.push("/");
+  }
   return (
     <header
       className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
@@ -80,7 +87,9 @@ export function Navbar() {
 
           {/* Right side */}
           <div className="flex items-center gap-3">
-            <button className="hidden md:flex items-center gap-2 px-3 py-2 text-sm text-slate-500 hover:text-red-400 hover:bg-red-500/10 rounded-full transition-all">
+            <button 
+            onClick={handleSignOut}
+            className="hidden md:flex items-center gap-2 px-3 py-2 text-sm text-slate-500 hover:text-red-400 hover:bg-red-500/10 rounded-full transition-all">
               <LogOut size={15} />
               <span className="font-medium">Sign out</span>
             </button>
@@ -117,7 +126,9 @@ export function Navbar() {
                 </Link>
               );
             })}
-            <button className="flex items-center gap-3 px-4 py-3 w-full text-sm font-medium text-red-400 hover:bg-red-500/10 rounded-xl transition-colors">
+            <button 
+            onClick={handleSignOut}
+            className="flex items-center gap-3 px-4 py-3 w-full text-sm font-medium text-red-400 hover:bg-red-500/10 rounded-xl transition-colors">
               <LogOut size={18} />
               Sign out
             </button>

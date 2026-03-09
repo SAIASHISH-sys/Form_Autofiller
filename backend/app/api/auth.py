@@ -65,9 +65,9 @@ def google_auth(token_data: schemas.GoogleToken, db: Session = Depends(get_db)):
 
         access_token = create_access_token(data={"sub": str(user.id)})
         return {"access_token": access_token, "token_type": "bearer"}
-    except ValueError:
-        raise HTTPException(status_code=401, detail="Invalid Google Token")
-
+    except ValueError as e:
+        print(f"Google token verification failed: {e}")  # Check terminal output
+        raise HTTPException(status_code=401, detail=f"Invalid Google Token: {str(e)}")
 
 # 4. Get current user info
 @router.get("/me", response_model=schemas.UserRead)

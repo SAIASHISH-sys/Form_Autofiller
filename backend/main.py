@@ -25,25 +25,52 @@ Base.metadata.create_all(bind=engine)
 # Mount auth router
 app.include_router(auth_router, prefix="/auth", tags=["auth"])
 
-@app.get("/profile/{user_id}", response_model=schemas.ProfileRead)
+@app.get("/profile/{user_id}", response_model=List[schemas.ProfileRead])
 def get_profile(user_id: UUID, db: Session = Depends(get_db)):
-    profile = db.query(models.Profile).filter(models.Profile.user_id == user_id).first()
-    if not profile:
+    profiles = db.query(models.Profile).filter(models.Profile.user_id == user_id).all()
+    if not profiles:
         raise HTTPException(status_code=404, detail="Profile not found")
-    return profile
+    return profiles
 
-@app.put("/profile/{user_id}", response_model=schemas.ProfileRead)
-def update_profile(user_id: UUID, profile_data: schemas.ProfileBase, db: Session = Depends(get_db)):
-    db_profile = db.query(models.Profile).filter(models.Profile.user_id == user_id).first()
+@app.post("/profile/{user_id}", response_model=schemas.ProfileRead)
+def create_profile(user_id: UUID, profile_data: schemas.ProfileUpdate, db: Session = Depends(get_db)):
+    db_profile = models.Profile(user_id=user_id, **profile_data.dict())
+    db.add(db_profile)
+    db.commit()
+    db.refresh(db_profile)
+    return db_profile
+
+@app.put("/profile/{profile_id}", response_model=schemas.ProfileRead)
+def update_profile(profile_id: UUID, profile_data: schemas.ProfileUpdate, db: Session = Depends(get_db)):
+    db_profile = db.query(models.Profile).filter(models.Profile.id == profile_id).first()
     if not db_profile:
-        # Create if it doesn't exist
-        db_profile = models.Profile(user_id=user_id, **profile_data.dict())
-        db.add(db_profile)
-    else:
-        # Update existing
-        for key, value in profile_data.dict().items():
-            setattr(db_profile, key, value)
-            
+        raise HTTPException(status_code=404, detail="Profile not found")
+    for key, value in profile_data.dict().items():
+        setattr(db_profile, key, value)
+    db.commit()
+    db.refresh(db_profile)
+    return db_profile
+
+@app.delete("/profile/{profile_id}")
+def delete_profile(profile_id: UUID, db: Session = Depends(get_db)):
+    db_profile = db.query(models.Profile).filter(models.Profile.id == profile_id).first()
+    if not db_profile:
+        raise HTTPException(status_code=404, detail="Profile not found")
+    db.delete(db_profile)
+    db.commit()
+    return {"detail": "Profile deleted"}
+
+@app.patch("/profile/{profile_id}/set-default", response_model=schemas.ProfileRead)
+def set_default_profile(profile_id: UUID, db: Session = Depends(get_db)):
+    db_profile = db.query(models.Profile).filter(models.Profile.id == profile_id).first()
+    if not db_profile:
+        raise HTTPException(status_code=404, detail="Profile not found")
+    # Unset all other defaults for this user
+    db.query(models.Profile).filter(
+        models.Profile.user_id == db_profile.user_id,
+        models.Profile.id != profile_id
+    ).update({"id_default": False})
+    db_profile.id_default = True
     db.commit()
     db.refresh(db_profile)
     return db_profile
@@ -52,6 +79,12 @@ def update_profile(user_id: UUID, profile_data: schemas.ProfileBase, db: Session
 def get_user_resumes(user_id: UUID, db: Session = Depends(get_db)):
     return db.query(models.Resume).filter(models.Resume.user_id == user_id).all()
 
+@app.get("/profile", response_model=list[schemas.ProfileRead])
+def get_own_profile(db: Session = Depends(get_db)):
+    profiles = db.query(models.Profile).all()
+    if not profiles:
+        raise HTTPException(status_code=404, detail="Profile not found")
+    return profiles
 
 if __name__ == "__main__":
     uvicorn.run("main:app", host="0.0.0.0", port=5000, reload=True)

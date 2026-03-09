@@ -32,6 +32,8 @@ class ProfileBase(BaseModel):
     mobile_no: Optional[str] = None
     # JSONB from Postgres maps perfectly to a Python List
     interests: List[str] = []
+    email: Optional[EmailStr] = None
+    id_default: Optional[bool] = False
 
 class ProfileUpdate(ProfileBase):
     pass

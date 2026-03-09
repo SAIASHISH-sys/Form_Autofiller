@@ -15,8 +15,7 @@ class User(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     # Relationships
-    profile = relationship("Profile", back_populates="user", uselist=False)
-    resumes = relationship("Resume", back_populates="user")
+    profiles = relationship("Profile", back_populates="user")
 
 class Profile(Base):
     __tablename__ = "profiles"
@@ -27,26 +26,32 @@ class Profile(Base):
     college = Column(String)
     dob = Column(Date)
     mobile_no = Column(String)
+    email = Column(String)
     interests = Column(JSONB, default=[])
+    id_default = Column(Boolean, default=False)
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
     user = relationship("User", back_populates="profile")
+    resumes = relationship("Resume", back_populates="profile")
+    resume_embedding = relationship("Resume", back_populates="profile", cascade="all , delete-orphan")
 
 class Resume(Base):
     __tablename__ = "resumes"
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"))
+    user_id = Column(UUID(as_uuid=True), ForeignKey("profiles.id", ondelete="CASCADE"))
     file_name = Column(String)
     raw_text = Column(Text)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
-    user = relationship("User", back_populates="resumes")
+    profile = relationship("Profile", back_populates="resumes")
 
 class ResumeEmbedding(Base):
     __tablename__ = "resume_embeddings"
     id = Column(UUID(as_uuid=True), primary_key=True, server_default=func.gen_random_uuid())
     resume_id = Column(UUID(as_uuid=True), ForeignKey("resumes.id", ondelete="CASCADE"))
-    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"))
+    user_id = Column(UUID(as_uuid=True), ForeignKey("profiles.id", ondelete="CASCADE"), nullable=False)
     content = Column(Text)
     # This matches your SQL: VECTOR(1536)
     embedding = Column(Vector(1536))
+
+    profile = relationship("Profile", back_populates="resume_embeddings")

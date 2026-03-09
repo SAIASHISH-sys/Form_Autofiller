@@ -1,9 +1,20 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from typing import Optional
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
+Gemin_API_KEY = os.getenv("GEMINI_API_KEY")
+LLM_Model = "gemini-2.5-flash"
+EMBEDDING_MODEL = "gemini-embedding-001"
+CHUNK_SIZE = 500
+CHUNK_OVERLAP = 100
+
 
 class Settings(BaseSettings):
     # --- Project Info ---
     PROJECT_NAME: str = "FormAutofiller AI"
+
     
     # --- Security ---
     # These will be overwritten by your .env file
